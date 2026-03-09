@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lucky 100 - Pro Version</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #ef4444;
+            --secondary: #2563eb;
+        }
+        body {
+            font-family: 'Kantumruy Pro', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .product-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+        .history-card {
+            background: white;
+            border-radius: 20px;
+            border-left: 4px solid #ef4444;
+        }
+        .progress-bar-fill {
+            transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .active-tab {
+            color: #2563eb;
+            border-bottom: 3px solid #2563eb;
+        }
+        .modal-enter { animation: modalFadeIn 0.3s ease-out; }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+    </style>
+</head>
+<body class="pb-24">
+
+    <!-- Header -->
+    <nav class="glass-header sticky top-0 z-50 px-5 py-4 flex justify-between items-center">
+        <div>
+            <h1 class="text-xl font-black text-red-600 tracking-tighter italic">LUCKY 100</h1>
+            <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">ផ្សងសំណាងមហាសប្បុរស</p>
+        </div>
+        <div id="user-profile" class="flex items-center gap-2">
+            <span id="user-name" class="text-[10px] font-bold text-gray-600 uppercase">ស្វាគមន៍</span>
+            <div id="user-avatar" class="w-8 h-8 rounded-full bg-gray-200 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center font-bold text-xs text-gray-400">?</div>
+        </div>
+    </nav>
+
+    <main class="p-5 max-w-md mx-auto">
+        <!-- Dashboard -->
+        <div class="bg-blue-600 rounded-[2rem] p-6 mb-8 text-white shadow-xl shadow-blue-100 flex justify-between items-center overflow-hidden relative">
+            <div class="relative z-10">
+                <p class="text-[10px] font-bold opacity-80 uppercase mb-1">សមតុល្យសរុប (៛)</p>
+                <h2 id="total-revenue" class="text-3xl font-black tracking-tighter">0</h2>
+                <button onclick="toggleAdmin()" id="admin-toggle" class="mt-4 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[9px] font-black uppercase border border-white/30 transition-all active:scale-95">Admin: OFF</button>
+            </div>
+            <div class="text-6xl opacity-20 absolute -right-4 -bottom-4 rotate-12">🇰🇭</div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-gray-100 mb-6">
+            <button id="tab-shop" onclick="switchTab('shop')" class="flex-1 py-3 text-xs font-black uppercase tracking-widest active-tab">🛍️ ហាងទំនិញ</button>
+            <button id="tab-history" onclick="switchTab('history')" class="flex-1 py-3 text-xs font-black uppercase tracking-widest text-gray-400">🏆 ប្រវត្តិឈ្នះ</button>
+        </div>
+
+        <!-- Content Area -->
+        <div id="shop-view" class="space-y-5">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="font-black text-gray-800 uppercase text-[10px] tracking-widest">🎁 រង្វាន់កំពុងលក់</h3>
+                <button id="add-btn" onclick="openAddModal()" class="hidden text-blue-600 font-bold text-[10px] uppercase bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">+ បន្ថែម</button>
+            </div>
+            <div id="product-list" class="space-y-5"></div>
+        </div>
+
+        <div id="history-view" class="hidden space-y-4">
+            <h3 class="font-black text-gray-800 uppercase text-[10px] tracking-widest mb-4">📜 បញ្ជីអ្នកសំណាង</h3>
+            <div id="history-list" class="space-y-3"></div>
+        </div>
+
+        <!-- Charity Note -->
+        <div class="mt-12 p-6 bg-red-50 rounded-[2rem] border border-red-100 text-center">
+            <div class="text-3xl mb-2">❤️</div>
+            <p class="text-xs font-bold text-red-600 mb-1">យើងរួមគ្នាជួយកុមារកម្ពុជា</p>
+            <p class="text-[9px] text-red-400 px-4 leading-relaxed uppercase">៥០% នៃប្រាក់ចំណេញនឹងត្រូវបរិច្ចាគជូនមន្ទីរពេទ្យគន្ធបុប្ផា</p>
+        </div>
+    </main>
+
+    <!-- Modal: Custom Alert/Confirm -->
+    <div id="modal-system" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-6 z-[200] backdrop-blur-md">
+        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl modal-enter text-center text-black">
+            <div id="sys-icon" class="text-4xl mb-4">🔔</div>
+            <h2 id="sys-title" class="text-lg font-black mb-2 uppercase tracking-tighter">បញ្ជាក់</h2>
+            <p id="sys-msg" class="text-xs text-gray-500 mb-8 leading-relaxed"></p>
+            <div class="flex gap-3" id="sys-buttons"></div>
+        </div>
+    </div>
+
+    <!-- Modal: Add Product -->
+    <div id="modal-product" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-6 z-[100] backdrop-blur-md">
+        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl modal-enter text-black">
+            <h2 id="modal-title" class="text-xl font-bold mb-6 text-gray-800">បង្កើតរង្វាន់ថ្មី</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-2 mb-1 block tracking-widest">ឈ្មោះផលិតផល</label>
+                    <input type="text" id="p-name" class="w-full bg-gray-50 p-4 rounded-2xl border border-gray-100 outline-none text-sm">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-2 mb-1 block tracking-widest">ចំនួនសំបុត្រ (១=១០០៛)</label>
+                    <input type="number" id="p-total" class="w-full bg-gray-50 p-4 rounded-2xl border border-gray-100 outline-none text-sm">
+                </div>
+                <div class="flex gap-2 pt-4">
+                    <button onclick="closeModal('modal-product')" class="flex-1 py-4 bg-gray-100 rounded-2xl font-bold text-sm text-gray-400">បោះបង់</button>
+                    <button onclick="saveProduct()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold text-sm shadow-lg">រក្សាទុក</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Payment QR -->
+    <div id="modal-pay" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-6 z-[90] backdrop-blur-md">
+        <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-sm text-center shadow-2xl text-black">
+            <h2 class="text-xl font-black mb-1 uppercase tracking-tighter text-blue-600">Scan to Buy</h2>
+            <p id="pay-info" class="text-[11px] text-gray-400 mb-6 font-bold uppercase"></p>
+            <div class="bg-gray-50 p-6 rounded-[2rem] border border-gray-100 mb-6">
+                <div class="w-40 h-40 bg-white mx-auto rounded-3xl shadow-inner flex items-center justify-center text-[10px] text-gray-300 italic mb-4">ABA QR Image</div>
+                <p class="text-xs font-black text-blue-700 tracking-[0.2em]">ABA: 000 111 222</p>
+                <p class="text-[9px] text-gray-400 mt-1 uppercase font-bold">LUCKY ADMIN</p>
+            </div>
+            <button onclick="requestApprove()" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-bold text-sm shadow-xl active:scale-95 mb-4 uppercase">ខ្ញុំបានបង់ប្រាក់រួចហើយ</button>
+            <button onclick="closeModal('modal-pay')" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">បោះបង់</button>
+        </div>
+    </div>
+
+    <!-- Modal: Winner -->
+    <div id="modal-win" class="fixed inset-0 bg-black/90 hidden items-center justify-center p-6 z-[110] backdrop-blur-xl">
+        <div class="bg-white rounded-[3rem] p-10 w-full max-w-sm text-center text-black shadow-2xl modal-enter">
+            <div class="text-7xl mb-6">🏆</div>
+            <h2 class="text-2xl font-black text-red-600 mb-2 uppercase tracking-tighter">អបអរសាទរអ្នកឈ្នះ!</h2>
+            <p id="win-p-name" class="text-gray-400 text-xs font-bold uppercase mb-8 tracking-widest"></p>
+            <div class="bg-red-50 p-8 rounded-[2.5rem] mb-10 border border-red-100">
+                <p class="text-[10px] text-red-300 font-bold uppercase tracking-[0.3em] mb-2">លេខសំណាងរបស់អ្នក</p>
+                <p id="win-code" class="text-6xl font-black text-red-600 tracking-tighter">#----</p>
+            </div>
+            <button onclick="closeModal('modal-win')" class="w-full bg-gray-900 text-white py-5 rounded-2xl font-bold text-lg">យល់ព្រម</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        let state = {
+            isAdmin: false,
+            items: JSON.parse(localStorage.getItem('lucky_v6_items')) || [],
+            history: JSON.parse(localStorage.getItem('lucky_v6_history')) || [],
+            currentUser: tg.initDataUnsafe?.user || { first_name: "Guest", id: 0 },
+            selectedId: null
+        };
+
+        document.getElementById('user-name').innerText = state.currentUser.first_name;
+        if (state.currentUser.photo_url) {
+            document.getElementById('user-avatar').innerHTML = `<img src="${state.currentUser.photo_url}" class="w-full h-full object-cover">`;
+        }
+
+        function switchTab(tab) {
+            const shopView = document.getElementById('shop-view');
+            const historyView = document.getElementById('history-view');
+            const tabShop = document.getElementById('tab-shop');
+            const tabHistory = document.getElementById('tab-history');
+
+            if (tab === 'shop') {
+                shopView.classList.remove('hidden');
+                historyView.classList.add('hidden');
+                tabShop.classList.add('active-tab');
+                tabHistory.classList.remove('active-tab');
+                tabHistory.classList.add('text-gray-400');
+            } else {
+                shopView.classList.add('hidden');
+                historyView.classList.remove('hidden');
+                tabShop.classList.remove('active-tab');
+                tabShop.classList.add('text-gray-400');
+                tabHistory.classList.add('active-tab');
+                renderHistory();
+            }
+        }
+
+        function render() {
+            const container = document.getElementById('product-list');
+            container.innerHTML = state.items.length === 0 ? `<div class="text-center py-20 opacity-30 text-xs font-bold uppercase tracking-widest">មិនទាន់មានរង្វាន់</div>` : '';
+
+            let totalRev = 0;
+            state.items.forEach(item => {
+                totalRev += (item.sold * 100);
+                const percent = Math.min(100, Math.floor((item.sold / item.total) * 100));
+                
+                container.innerHTML += `
+                    <div class="product-card p-6 border border-gray-100 overflow-hidden" onclick="handleCardClick(${item.id})">
+                        <div class="${state.isAdmin ? 'flex' : 'hidden'} absolute top-4 right-4 gap-2 z-[60]">
+                            <button onclick="deleteProduct(${item.id}, event)" class="bg-red-50 text-red-600 w-8 h-8 flex items-center justify-center rounded-lg text-[10px] font-bold">លុប</button>
+                        </div>
+                        <h3 class="font-black text-gray-800 text-lg uppercase tracking-tighter">${item.name}</h3>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase mb-4">${item.total.toLocaleString()} សំបុត្រ | ១០០៛/សន្លឹក</p>
+                        
+                        <div class="mb-5">
+                            <div class="flex justify-between text-[10px] font-bold uppercase mb-1">
+                                <span class="text-gray-400">លក់បាន: ${item.sold}</span>
+                                <span class="text-red-600">${percent}%</span>
+                            </div>
+                            <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden p-[1px]">
+                                <div class="bg-red-500 h-full rounded-full progress-bar-fill" style="width: ${percent}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="${state.isAdmin ? 'hidden' : 'flex'} gap-2">
+                            <button onclick="openPay(${item.id}, 1, event)" class="flex-[2] bg-blue-600 text-white py-3 rounded-xl font-bold text-[10px] uppercase shadow-md active:scale-95">ទិញ ១ សន្លឹក</button>
+                            <button onclick="openPay(${item.id}, 10, event)" class="flex-1 bg-gray-50 text-gray-700 py-3 rounded-xl font-bold text-[10px] border border-gray-100 active:scale-95">១០</button>
+                        </div>
+
+                        <div class="${state.isAdmin ? 'block' : 'hidden'} mt-4 pt-4 border-t border-dashed">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold text-orange-500 uppercase">${item.pending} សំណើទិញ</span>
+                                <button onclick="approveAll(${item.id}, event)" class="bg-green-500 text-white px-4 py-2 rounded-lg text-[10px] font-bold">APPROVE</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('total-revenue').innerText = totalRev.toLocaleString();
+            localStorage.setItem('lucky_v6_items', JSON.stringify(state.items));
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-list');
+            container.innerHTML = state.history.length === 0 ? `<div class="text-center py-20 opacity-30 text-xs font-bold uppercase tracking-widest">មិនទាន់មានប្រវត្តិឈ្នះ</div>` : '';
+
+            state.history.sort((a, b) => b.timestamp - a.timestamp);
+
+            state.history.forEach(record => {
+                const date = new Date(record.timestamp);
+                const dateStr = date.toLocaleDateString('km-KH', { day: '2-digit', month: 'short', year: 'numeric' });
+                const timeStr = date.toLocaleTimeString('km-KH', { hour: '2-digit', minute: '2-digit' });
+
+                container.innerHTML += `
+                    <div class="history-card p-4 shadow-sm flex justify-between items-center">
+                        <div>
+                            <p class="text-[9px] font-bold text-gray-400 uppercase mb-1">${dateStr} • ${timeStr}</p>
+                            <h4 class="font-black text-gray-800 text-sm uppercase tracking-tighter">${record.productName}</h4>
+                            <p class="text-[10px] font-bold text-red-600">អ្នកឈ្នះ: ${record.winnerName}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="bg-red-50 text-red-600 px-3 py-1 rounded-full text-[12px] font-black italic">#${record.code}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            localStorage.setItem('lucky_v6_history', JSON.stringify(state.history));
+        }
+
+        function sysAlert(msg, title = "ដំណឹង") {
+            document.getElementById('sys-title').innerText = title;
+            document.getElementById('sys-msg').innerText = msg;
+            document.getElementById('sys-buttons').innerHTML = `<button onclick="closeModal('modal-system')" class="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold text-sm uppercase">យល់ព្រម</button>`;
+            openModal('modal-system');
+        }
+
+        function sysConfirm(msg, onConfirm) {
+            document.getElementById('sys-title').innerText = "បញ្ជាក់";
+            document.getElementById('sys-msg').innerText = msg;
+            document.getElementById('sys-buttons').innerHTML = `
+                <button onclick="closeModal('modal-system')" class="flex-1 py-4 bg-gray-100 text-gray-400 rounded-2xl font-bold text-sm">ទេ</button>
+                <button id="confirm-yes" class="flex-1 py-4 bg-red-600 text-white rounded-2xl font-bold text-sm">បាទ/ចាស</button>
+            `;
+            document.getElementById('confirm-yes').onclick = () => { onConfirm(); closeModal('modal-system'); };
+            openModal('modal-system');
+        }
+
+        function toggleAdmin() {
+            state.isAdmin = !state.isAdmin;
+            const btn = document.getElementById('admin-toggle');
+            btn.innerText = `Admin: ${state.isAdmin ? 'ON' : 'OFF'}`;
+            btn.classList.toggle('bg-red-600', state.isAdmin);
+            document.getElementById('add-btn').classList.toggle('hidden', !state.isAdmin);
+            render();
+        }
+
+        function openAddModal() {
+            document.getElementById('p-name').value = '';
+            document.getElementById('p-total').value = '';
+            openModal('modal-product');
+        }
+
+        function saveProduct() {
+            const name = document.getElementById('p-name').value;
+            const total = parseInt(document.getElementById('p-total').value);
+            if (!name || isNaN(total)) return sysAlert("សូមបំពេញឱ្យគ្រប់!");
+            state.items.push({ id: Date.now(), name, total, sold: 0, pending: 0 });
+            render();
+            closeModal('modal-product');
+        }
+
+        function deleteProduct(id, e) {
+            e.stopPropagation();
+            sysConfirm("តើអ្នកប្រាកដថាចង់លុបរង្វាន់នេះ?", () => {
+                state.items = state.items.filter(i => i.id !== id);
+                render();
+            });
+        }
+
+        function openPay(id, count, e) {
+            if (e) e.stopPropagation();
+            state.selectedId = id;
+            const item = state.items.find(i => i.id === id);
+            document.getElementById('pay-info').innerText = `ទិញសំបុត្រចំនួន ${count} សម្រាប់ ${item.name}`;
+            openModal('modal-pay');
+        }
+
+        function requestApprove() {
+            const item = state.items.find(i => i.id === state.selectedId);
+            item.pending += 1;
+            closeModal('modal-pay');
+            render();
+            sysAlert("បានផ្ញើសំណើ! សូមផ្ញើវិក្កយបត្រទៅ Admin។", "រួចរាល់");
+        }
+
+        function approveAll(id, e) {
+            if (e) e.stopPropagation();
+            const item = state.items.find(i => i.id === id);
+            if (item.pending > 0) {
+                item.sold += item.pending;
+                item.pending = 0;
+                if (item.sold >= item.total) {
+                    const code = Math.floor(1000 + Math.random() * 9000);
+                    state.history.push({
+                        id: Date.now(),
+                        productName: item.name,
+                        winnerName: state.currentUser.first_name,
+                        code: code,
+                        timestamp: Date.now()
+                    });
+                    document.getElementById('win-p-name').innerText = item.name;
+                    document.getElementById('win-code').innerText = `#${code}`;
+                    openModal('modal-win');
+                    item.sold = 0;
+                }
+                render();
+            }
+        }
+
+        function handleCardClick(id) { if (!state.isAdmin) openPay(id, 1); }
+        function openModal(id) { document.getElementById(id).classList.replace('hidden', 'flex'); }
+        function closeModal(id) { document.getElementById(id).classList.replace('flex', 'hidden'); }
+
+        render();
+    </script>
+</body>
+</html>
